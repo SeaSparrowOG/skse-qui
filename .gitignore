@@ -1,10 +1,6 @@
-# dot folders
-.vs/
-.vscode/
-.xmake/
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
 
-# folders
-build/
-
-# files
-*.zip
+/.vs
+/build

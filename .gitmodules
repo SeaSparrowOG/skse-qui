@@ -1,0 +1,6 @@
+[submodule "Extern/CommonlibSSE"]
+	path = Extern/CommonlibSSE
+	url = https://github.com/SeaSparrowOG/CommonLibSSE
+[submodule "tomlplusplus"]
+	path = tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
