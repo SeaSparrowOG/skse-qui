@@ -1,0 +1,21 @@
+{
+  "name": "qui",
+  "version-string": "0.4.0",
+  "description": "",
+  "homepage": "",
+  "license": "gpl3",
+  "dependencies": [
+    "frozen",
+    "rsm-binary-io",
+    "tomlplusplus",
+    "spdlog",
+    "xbyak"
+  ],
+  "overrides": [
+    {
+      "name": "fmt",
+      "version": "9.1.0"
+    }
+  ],
+  "builtin-baseline": "198d68dbcc6c907cb3d0b9b1d93c3df6ecf93c62"
+}

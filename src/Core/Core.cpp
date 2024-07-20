@@ -40,13 +40,13 @@ namespace Core
 
 	void Init()
 	{
-		logger::info("Loading config..."sv);
+		logger::info("Loading config...");
 		if (const auto config = Config::GetSingleton()) {
 			config->Load();
 			config->Read();
 		}
 
-		logger::info("Loading localizations..."sv);
+		logger::info("Loading localizations...");
 		auto& config = Config::Get();
 		if (const auto locale = LocaleManager::GetSingleton()) {
 			locale->SetLocale(config.General.Locale);

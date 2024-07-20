@@ -54,7 +54,7 @@ namespace Core::Menu
 	{
 		auto handler = RE::TESDataHandler::GetSingleton();
 		if (!handler) {
-			logger::error("Missing TESDataHandler!"sv);
+			logger::error("Missing TESDataHandler!");
 			return;
 		}
 
