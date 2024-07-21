@@ -50,6 +50,14 @@
       }
     },
     {
+      "name": "ng",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build-ng",
+      "cacheVariables": {
+        "BUILD_NG": true
+      }
+    },
+    {
       "name": "vs2022-windows-vcpkg-release",
       "inherits": [
         "cmake-dev",
@@ -68,6 +76,16 @@
         "vs2022",
         "test"
       ]
+    },
+    {
+      "name": "vs2022-windows-vcpkg-ng",
+      "inherits": [
+        "cmake-dev",
+        "vcpkg",
+        "windows",
+        "vs2022",
+        "ng"
+      ]
     }
   ],
   "buildPresets": [
@@ -79,6 +97,11 @@
     {
       "name": "Test",
       "configurePreset": "vs2022-windows-vcpkg-test",
+      "configuration": "Release"
+    },
+    {
+      "name": "Release - NG",
+      "configurePreset": "vs2022-windows-vcpkg-ng",
       "configuration": "Release"
     }
   ]

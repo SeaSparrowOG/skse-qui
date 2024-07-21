@@ -5,6 +5,8 @@
   "homepage": "",
   "license": "gpl3",
   "dependencies": [
+    "rapidcsv",
+    "directxtk",
     "frozen",
     "rsm-binary-io",
     "tomlplusplus",

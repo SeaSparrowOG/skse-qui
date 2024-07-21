@@ -4,3 +4,7 @@
 [submodule "tomlplusplus"]
 	path = tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
+[submodule "Extern/CommonLibNG"]
+	path = Extern/CommonLibNG
+	url = https://github.com/alandtse/CommonLibVR
+	branch = ng

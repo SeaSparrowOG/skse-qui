@@ -24,6 +24,25 @@ void InitLogger()
 	spdlog::set_pattern("%v");
 }
 
+#ifdef SKYRIM_NG
+SKSEPluginInfo(
+		.Name = "qui")
+
+	SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
+{
+	InitLogger();
+
+	const auto plugin = SKSE::PluginDeclaration::GetSingleton();
+	logger::info("{} v{}", plugin->GetName(), plugin->GetVersion());
+
+	SKSE::Init(a_skse);
+	Core::Init();
+
+	logger::info("{} loaded", plugin->GetName());
+
+	return true;
+}
+#else
 extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	SKSE::PluginVersionData v;
 	v.PluginVersion({ Version::MAJOR, Version::MINOR, Version::PATCH });
@@ -44,3 +63,4 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	return true;
 }
+#endif

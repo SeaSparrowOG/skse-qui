@@ -5,6 +5,7 @@ set(VERSION 0.4.0 CACHE STRING "")
 
 # ---- Options ----
 option(BUILD_TEST "Sets log level to debug." OFF)
+option(BUILD_NG "Uses the NG library to build project" OFF)
 
 # ---- Cache build vars ----
 macro(set_from_environment VARIABLE)
@@ -15,20 +16,31 @@ endmacro()
 
 macro(find_commonlib_path)
 	if (CommonLibName AND NOT ${CommonLibName} STREQUAL "")
-		# Check path
-		set_from_environment(${CommonLibName}Path)
-		set(CommonLibPath ${${CommonLibName}Path})
+		#Check extern
+		find_path(CommonLibPath
+		include/REL/Relocation.h
+		PATHS extern/${CommonLibName})
 		if (${CommonLibPath} STREQUAL "CommonLibPath-NOTFOUND")
-			#Check extern
-			find_path(CommonLibPath
-			include/REL/Relocation.h
-			PATHS extern/${CommonLibName})
+			# Check path
+			set_from_environment(${CommonLibName}Path)
+			set(CommonLibPath ${${CommonLibName}Path})
 		endif()
 	endif()
 endmacro()
 
 set_from_environment(VCPKG_ROOT) 
-set(CommonLibName "CommonLibSSE")
+
+if (BUILD_NG)
+	set(CommonLibName "CommonLibNG")
+	set(BUILD_TESTS OFF)
+	set(CMAKE_CXX_STANDARD 23)
+	set(CMAKE_CXX_STANDARD_REQUIRED ON)
+	include(GNUInstallDirs)
+	add_compile_definitions(SKYRIM_NG)
+else()
+	set(CommonLibName "CommonLibSSE")
+endif()
+
 find_commonlib_path()
 set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "")
@@ -142,11 +154,19 @@ target_include_directories(
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+if(BUILD_NG)
 target_link_libraries(
 	${PROJECT_NAME}
 	PRIVATE
+		CommonLibSSE::CommonLibSSE
+	)
+else()
+	target_link_libraries(
+	${PROJECT_NAME}
+	PRIVATE
 		${CommonLibName}::${CommonLibName}
-)
+	)
+endif()
 
 target_precompile_headers(
 	${PROJECT_NAME}
@@ -183,7 +203,9 @@ endif ()
 if(DEFINED ENV{SKYRIM_MODS_FOLDER} AND IS_DIRECTORY "$ENV{SKYRIM_MODS_FOLDER}")
 	if(DEBUG)
 		set(OUTPUT_FOLDER "$ENV{SKYRIM_MODS_FOLDER}/${PROJECT_NAME} - Test")
-	else() 
+	elseif(BUILD_NG) 
+		set(OUTPUT_FOLDER "$ENV{SKYRIM_MODS_FOLDER}/${PROJECT_NAME} - NG")
+	else()
 		set(OUTPUT_FOLDER "$ENV{SKYRIM_MODS_FOLDER}/${PROJECT_NAME} - Release")
 	endif()
 endif()
