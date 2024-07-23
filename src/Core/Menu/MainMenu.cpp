@@ -75,12 +75,12 @@ namespace Core::Menu
 
 					for (const auto& [enabled, name] : values) {
 						if (!enabled && (text == name)) {
-							logger::info("Removed {} -> {}", name, entryList.RemoveElement(i - 1));
+							entryList.RemoveElement(i - 1);
 						}
 					}
 				}
 
-				logger::info("Finished: {}", mainList.Invoke("InvalidateData"));
+				mainList.Invoke("InvalidateData");
 			} else {
 				logger::warn("MainMenuEx: Could not invoke _root.MenuHolder.Menu_mc.MainList.__get__entryList()");
 			}
