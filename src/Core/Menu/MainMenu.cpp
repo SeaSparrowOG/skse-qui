@@ -52,7 +52,7 @@ namespace Core::Menu
 			if (mainList.Invoke("__get__entryList", &entryList)) {
 				using element_t = std::pair<bool, std::string_view>;
 				std::array values{
-					element_t{ config.List.CC, "$CREATION CLUB" },
+					element_t{ config.List.CC, "$CREATIONS" },
 					element_t{ config.List.DLC, "$DOWNLOADABLE CONTENT" },
 					element_t{ config.List.Mods, "$MOD MANAGER" },
 					element_t{ config.List.Credits, "$CREDITS" },
@@ -75,12 +75,12 @@ namespace Core::Menu
 
 					for (const auto& [enabled, name] : values) {
 						if (!enabled && (text == name)) {
-							entryList.RemoveElement(i - 1);
+							logger::info("Removed {} -> {}", name, entryList.RemoveElement(i - 1));
 						}
 					}
 				}
 
-				mainList.Invoke("InvalidateData");
+				logger::info("Finished: {}", mainList.Invoke("InvalidateData"));
 			} else {
 				logger::warn("MainMenuEx: Could not invoke _root.MenuHolder.Menu_mc.MainList.__get__entryList()");
 			}
@@ -118,13 +118,13 @@ namespace Core::Menu
 			}
 			case Message::kUpdate: {
 				if (_show) {
-					_show = false;
+					//No, I do not know why. Don't ask.
+					//_show = false;
 					ProcessEx(uiMovie);
 				}
 				break;
 			}
 		}
-
 		return _ProcessMessageFn(this, a_message);
 	}
 
