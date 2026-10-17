@@ -10,6 +10,10 @@
 Let's you explore and access a plugin's items (Weapons, Armor, etc.)
 * `F11` toggles the interface
 
+Plugin authors can use the optional [runtime menu API](docs/MenuAPI.md) to open,
+close, query Plugin Explorer, or temporarily disable its native hotkey without
+changing the player's configuration.
+
 ## MainMenu
 Edit aspects of the main menu. Don't like the Creation Club banner
 nagging you? Want to remove items from the list? Well, you're in luck!

@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.24)
+project(QUIAPITests LANGUAGES CXX)
+enable_testing()
+
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../src/API.cpp" api_source)
+string(FIND "${api_source}" "namespace Core::API" api_begin)
+if(api_begin LESS 0)
+    message(FATAL_ERROR "Update API implementation extraction marker")
+endif()
+string(SUBSTRING "${api_source}" ${api_begin} -1 API_IMPLEMENTATION)
+
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../src/Core/Menu/PluginExplorerHandler.cpp" handler_source)
+string(FIND "${handler_source}" "\tvoid PluginExplorerHandler::ProcessKeyboard(" handler_begin)
+if(handler_begin LESS 0)
+    message(FATAL_ERROR "Update native toggle extraction marker")
+endif()
+string(SUBSTRING "${handler_source}" ${handler_begin} -1 NATIVE_TOGGLE_IMPLEMENTATION)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/API.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/Core/Menu/PluginExplorerHandler.cpp")
+
+configure_file(MenuAPITests.cpp.in MenuAPITests.cpp @ONLY)
+add_executable(MenuAPITests "${CMAKE_CURRENT_BINARY_DIR}/MenuAPITests.cpp")
+target_compile_features(MenuAPITests PRIVATE cxx_std_20)
+target_include_directories(MenuAPITests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+if(MSVC)
+    target_compile_options(MenuAPITests PRIVATE /W4 /WX /UNDEBUG)
+else()
+    target_compile_options(MenuAPITests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+endif()
+add_test(NAME MenuAPI COMMAND MenuAPITests)
+add_test(NAME DisabledPluginExplorerAPI COMMAND MenuAPITests --disabled)

@@ -3,6 +3,7 @@
 #include "Core/Menu/PluginExplorer.hpp"
 
 #include "Core/Config.hpp"
+#include "API.hpp"
 
 namespace Core::Menu
 {
@@ -41,6 +42,8 @@ namespace Core::Menu
 	void PluginExplorerHandler::Handle(const RE::MenuOpenCloseEvent* a_event)
 	{
 		using Menu = PluginExplorerMenu;
+		if (a_event->menuName == Menu::MENU_NAME)
+			API::SetMenuOpen(a_event->opening);
 		auto uiStr = RE::InterfaceStrings::GetSingleton();
 		if (!uiStr)
 			return;
@@ -82,6 +85,9 @@ namespace Core::Menu
 
 	void PluginExplorerHandler::ProcessKeyboard(const RE::ButtonEvent& a_event)
 	{
+		if (!API::IsHotkeyEnabled())
+			return;
+
 		using Menu = PluginExplorerMenu;
 		auto& config = Config::Get();
 		auto& key = config.PluginExplorer.Key;
