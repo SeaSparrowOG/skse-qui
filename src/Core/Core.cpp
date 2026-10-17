@@ -1,4 +1,5 @@
 #include "Core/Core.hpp"
+#include "API.hpp"
 #include "Core/Config.hpp"
 
 #include "Core/Console/ConsoleCommands.hpp"
@@ -36,6 +37,9 @@ namespace Core
 			if (config.PluginExplorer.Enable)
 				event->Register(Menu::PluginExplorerHandler::GetSingleton());
 		}
+
+		if (config.PluginExplorer.Enable && RE::UI::GetSingleton())
+			API::SetMenuReady();
 	}
 
 	void Init()

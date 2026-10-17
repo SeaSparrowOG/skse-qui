@@ -1,0 +1,255 @@
+#include "QUIAPI.h"
+
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <mutex>
+#include <string_view>
+#include <thread>
+#include <vector>
+
+namespace RE
+{
+    struct UI
+    {
+        static inline bool available = true;
+        static UI* GetSingleton()
+        {
+            static UI instance;
+            return available ? &instance : nullptr;
+        }
+    };
+    struct UIMessageQueue
+    {
+        static inline bool available = true;
+        static UIMessageQueue* GetSingleton()
+        {
+            static UIMessageQueue instance;
+            return available ? &instance : nullptr;
+        }
+    };
+    struct ButtonEvent
+    {
+        unsigned scan;
+        unsigned GetIDCode() const { return scan; }
+    };
+}
+
+namespace SKSE
+{
+    class TaskInterface
+    {
+    public:
+        void AddUITask(std::function<void()> task)
+        {
+            std::scoped_lock lock(mutex_);
+            tasks_.push_back(std::move(task));
+        }
+        void Drain()
+        {
+            std::vector<std::function<void()>> pending;
+            {
+                std::scoped_lock lock(mutex_);
+                pending.swap(tasks_);
+            }
+            for (auto& task : pending) task();
+        }
+    private:
+        std::mutex mutex_;
+        std::vector<std::function<void()>> tasks_;
+    };
+    static TaskInterface tasks;
+    static bool tasksAvailable = true;
+    static TaskInterface* GetTaskInterface() { return tasksAvailable ? &tasks : nullptr; }
+}
+
+namespace Core
+{
+    struct Config
+    {
+        struct Settings
+        {
+            struct Explorer
+            {
+                struct Keys { unsigned KeyboardToggle = 87; } Key;
+            } PluginExplorer;
+        };
+        static Settings& Get()
+        {
+            static Settings config;
+            return config;
+        }
+    };
+}
+
+namespace Core::Menu
+{
+    class PluginExplorerMenu
+    {
+    public:
+        enum class Focus { Plugin, Form, Container, ContainerLoop };
+        static inline Focus focus = Focus::Plugin;
+        static inline std::vector<bool> messages;
+        static inline int toggles = 0;
+        static void Open() { messages.push_back(true); }
+        static void Close() { messages.push_back(false); }
+        static void SetFocus(Focus value) { focus = value; }
+        static void Toggle() { ++toggles; }
+    };
+    class PluginExplorerHandler
+    {
+    public:
+        void ProcessKeyboard(const RE::ButtonEvent& event);
+    };
+}
+
+@API_IMPLEMENTATION@
+
+namespace Core::Menu
+{
+@NATIVE_TOGGLE_IMPLEMENTATION@
+
+static bool visible = false;
+static int containerHandoffs = 0;
+static void ProcessMessages()
+{
+    using Menu = Core::Menu::PluginExplorerMenu;
+    for (bool open : Menu::messages) {
+        if (!open && visible && Menu::focus == Menu::Focus::Container)
+            ++containerHandoffs;
+        visible = open;
+        Core::API::SetMenuOpen(open);
+    }
+    Menu::messages.clear();
+}
+
+int main(int argc, char** argv)
+{
+    using Menu = Core::Menu::PluginExplorerMenu;
+    assert(!QUI_IsMenuOpen());
+    assert(Core::API::IsHotkeyEnabled());
+    QUI_SetHotkeyEnabled(false); // Registration can happen before kDataLoaded.
+    assert(!Core::API::IsHotkeyEnabled());
+    assert(!QUI_Open());
+    QUI_Close();
+    SKSE::tasks.Drain();
+    assert(Menu::messages.empty());
+    if (argc > 1 && std::string_view(argv[1]) == "--disabled") {
+        // Core never calls SetMenuReady when PluginExplorer.Enable is false.
+        QUI_SetHotkeyEnabled(true);
+        assert(!QUI_Open());
+        return 0;
+    }
+
+    Core::API::SetMenuReady();
+    assert(!Core::API::IsHotkeyEnabled()); // Initialization must not undo suppression.
+    assert(QUI_Open()); // Native key disabled does not disable API opening.
+    assert(!QUI_IsMenuOpen());
+    SKSE::tasks.Drain();
+    assert(Menu::messages.size() == 1 && Menu::messages[0]);
+    assert(!QUI_IsMenuOpen()); // A queued message is not actual visibility.
+    ProcessMessages();
+    assert(QUI_IsMenuOpen());
+    assert(QUI_Open());
+    SKSE::tasks.Drain();
+    ProcessMessages();
+    assert(QUI_IsMenuOpen()); // Repeated open is not a toggle.
+
+    Menu::SetFocus(Menu::Focus::Container);
+    QUI_Close();
+    assert(QUI_IsMenuOpen());
+    SKSE::tasks.Drain();
+    assert(Menu::focus == Menu::Focus::Plugin);
+    ProcessMessages();
+    assert(!QUI_IsMenuOpen() && containerHandoffs == 0);
+    QUI_Close();
+    SKSE::tasks.Drain();
+    ProcessMessages();
+    assert(!QUI_IsMenuOpen());
+
+    assert(QUI_Open());
+    QUI_Close();
+    SKSE::tasks.Drain();
+    assert(Menu::messages.size() == 1 && !Menu::messages[0]);
+    ProcessMessages();
+    assert(!QUI_IsMenuOpen()); // Close supersedes an unexecuted open task.
+
+    QUI_Close();
+    assert(QUI_Open());
+    SKSE::tasks.Drain();
+    ProcessMessages();
+    assert(QUI_IsMenuOpen()); // A later open wins too.
+
+    QUI_Close();
+    SKSE::tasks.Drain(); // Hide is queued, but menu is still visibly open.
+    assert(QUI_Open());
+    SKSE::tasks.Drain();
+    ProcessMessages();
+    assert(QUI_IsMenuOpen()); // Do not skip open merely because a hide is pending.
+
+    QUI_Close();
+    SKSE::tasks.Drain();
+    ProcessMessages();
+    assert(QUI_Open());
+    SKSE::tasks.Drain(); // Show is queued, but menu is still visibly closed.
+    QUI_Close();
+    SKSE::tasks.Drain();
+    ProcessMessages();
+    assert(!QUI_IsMenuOpen());
+
+    SKSE::tasksAvailable = false;
+    assert(!QUI_Open());
+    QUI_Close();
+    SKSE::tasksAvailable = true;
+    assert(QUI_Open());
+    RE::UI::available = false;
+    SKSE::tasks.Drain();
+    assert(Menu::messages.empty());
+    RE::UI::available = true;
+    assert(QUI_Open());
+    RE::UIMessageQueue::available = false;
+    SKSE::tasks.Drain();
+    assert(Menu::messages.empty());
+    RE::UIMessageQueue::available = true;
+
+    Core::API::SetMenuOpen(true); // Native opens and Back/close update the same state.
+    assert(QUI_IsMenuOpen());
+    Core::API::SetMenuOpen(false);
+    assert(!QUI_IsMenuOpen());
+
+    Core::Menu::PluginExplorerHandler handler;
+    handler.ProcessKeyboard({87});
+    assert(Menu::toggles == 0);
+    QUI_SetHotkeyEnabled(true);
+    handler.ProcessKeyboard({87});
+    assert(Menu::toggles == 1);
+    Core::Config::Get().PluginExplorer.Key.KeyboardToggle = 42;
+    QUI_SetHotkeyEnabled(false);
+    handler.ProcessKeyboard({42});
+    assert(Menu::toggles == 1);
+    assert(Core::Config::Get().PluginExplorer.Key.KeyboardToggle == 42);
+    QUI_SetHotkeyEnabled(true);
+    handler.ProcessKeyboard({87});
+    assert(Menu::toggles == 1);
+    handler.ProcessKeyboard({42});
+    assert(Menu::toggles == 2); // Re-enable uses the player's current key, not F11.
+
+    std::vector<std::thread> workers;
+    for (int i = 0; i < 4; ++i) {
+        workers.emplace_back([] {
+            for (int iteration = 0; iteration < 200; ++iteration) {
+                assert(QUI_Open());
+                QUI_Close();
+                QUI_SetHotkeyEnabled(iteration % 2 == 0);
+                (void)QUI_IsMenuOpen();
+            }
+        });
+    }
+    for (auto& worker : workers) worker.join();
+    QUI_Close();
+    SKSE::tasks.Drain();
+    assert(Menu::messages.size() == 1 && !Menu::messages[0]);
+    ProcessMessages();
+    assert(!QUI_IsMenuOpen());
+}
